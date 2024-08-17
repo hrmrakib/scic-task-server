@@ -1,4 +1,4 @@
-## [Live Preview](https://scic-task-client.vercel.app/)
+## [Live Preview](https://scic-task1.web.app/)
 
 Instruction for locally run:
 - git clone https://github.com/hrmrakib/scic-task-server
