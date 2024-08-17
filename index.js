@@ -4,7 +4,7 @@ const dotenv = require("dotenv");
 const app = express();
 dotenv.config();
 
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 5000;
 
 app.use(cors());
 app.use(express.json());
@@ -28,8 +28,49 @@ async function run() {
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
 
+    const db = client.db("scic-task");
+    const userCollection = db.collection("users");
+    const productCollection = db.collection("products");
+
     app.get("/", (req, res) => {
-      console.log("first");
+      res.send("Hello");
+    });
+
+    app.post("/user", async (req, res) => {
+      const user = req.body;
+      const result = await userCollection.insertOne(user);
+      res.send(result);
+    });
+
+    app.get("/products", async (req, res) => {
+      const { page = 1, limit = 10, search = "", category, sortBy } = req.query;
+      const query = {
+        name: { $regex: search, $options: "i" },
+        ...(category && { category }),
+      };
+      let sortOptions = {};
+      if (sortBy === "price") sortOptions.price = 1;
+      if (sortBy === "price_desc") sortOptions.price = -1;
+      if (sortBy === "date") sortOptions.createdAt = -1;
+
+      try {
+        const products = await productCollection
+          .find(query)
+          .sort(sortOptions)
+          .skip((page - 1) * limit)
+          .limit(parseInt(limit))
+          .toArray();
+
+        const total = await productCollection.countDocuments(query);
+
+        res.json({
+          products,
+          totalPages: Math.ceil(total / limit),
+          currentPage: page,
+        });
+      } catch (error) {
+        res.status(500).json({ error: error.message });
+      }
     });
 
     console.log(
@@ -37,7 +78,7 @@ async function run() {
     );
   } finally {
     // Ensures that the client will close when you finish/error
-    await client.close();
+    // await client.close();
   }
 }
 run().catch(console.dir);
